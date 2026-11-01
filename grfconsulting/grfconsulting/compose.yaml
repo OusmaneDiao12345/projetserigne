@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: grfconsulting-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-grfconsulting}
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - grf_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-grfconsulting}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  api:
+    build: .
+    container_name: grfconsulting-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-grfconsulting}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_MODEL_CHAT: ${AI_MODEL_CHAT:-none}
+      AI_MODEL_EMBEDDING: ${AI_MODEL_EMBEDDING:-none}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-2.5-flash}
+      DEXPAY_API_URL: ${DEXPAY_API_URL:-https://api-sandbox.dexpay.africa/api/v1}
+      DEXPAY_API_KEY: ${DEXPAY_API_KEY:-}
+      DEXPAY_API_SECRET: ${DEXPAY_API_SECRET:-}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:4200}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-DEXPAY}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET dans le fichier .env}
+      JWT_DURATION_MINUTES: ${JWT_DURATION_MINUTES:-60}
+      ADMIN_BOOTSTRAP_PHONE: ${ADMIN_BOOTSTRAP_PHONE:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+
+volumes:
+  grf_postgres_data:
